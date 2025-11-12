@@ -1,11 +1,5 @@
 # app/services/chat.py
 from typing import List, Dict
-
-# Exemple: tu importes ta logique existante
-from app.intents import route_intent
-from app.tools.calculators import evaluate_expression
-from app.rag.retriever import retrieve
-
 from app.intents import detect_intent, parse_params
 from app.tools.calculators import compound, loan_payment
 from app.rag.retriever import answer_with_knowledge
