@@ -51,3 +51,20 @@ def home(request: Request):
 def chat_api(payload: ChatInput):
     result = chat_service(payload.message, payload.history or [])
     return result
+
+if __name__ == "__main__":
+    import webbrowser
+    import threading
+    import time
+    import uvicorn
+
+    # Fonction pour ouvrir le navigateur avec un léger délai
+    def open_browser():
+        time.sleep(1)
+        webbrowser.open("http://127.0.0.1:8000")
+
+    # Lancer le navigateur dans un thread séparé
+    threading.Thread(target=open_browser).start()
+
+    # Lancer le serveur FastAPI
+    uvicorn.run("app.main:app", host="127.0.0.1", port=8000, reload=True)
