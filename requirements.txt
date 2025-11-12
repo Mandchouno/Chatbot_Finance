@@ -8,3 +8,7 @@ pytest
 ## Pour le RAG 
 sentence-transformers
 chromadb
+
+## Pour l'interface utilisateur
+jinja2
+python-multipart
