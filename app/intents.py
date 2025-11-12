@@ -8,9 +8,27 @@ def detect_intent(text: str) -> str:
         return "calc:loan"
     return "rag"
 
+import re
+
 def parse_params(text: str):
-    nums = [float(x.replace(",", ".")) for x in re.findall(r"\d+(?:[\.,]\d+)?", text)]
-    # Heuristique simple: [montant, taux%, années]
-    if len(nums) >= 3:
-        return {"principal": nums[0], "rate": nums[1]/100.0, "years": int(round(nums[2]))}
-    return {"principal": 1000.0, "rate": 0.05, "years": 5}
+    t = text.lower()
+
+    # Valeur par défaut
+    principal, rate, years = 1000.0, 0.05, 5
+
+    # Taux : cherche un nombre suivi de %
+    rate_match = re.search(r"(\d+(?:[\.,]\d+)?)\s*%", t)
+    if rate_match:
+        rate = float(rate_match.group(1).replace(",", ".")) / 100.0
+
+    # Années : cherche un nombre suivi de "an" ou "année"
+    year_match = re.search(r"(\d+(?:[\.,]\d+)?)\s*(ans|an|année|années)", t)
+    if year_match:
+        years = float(year_match.group(1))
+
+    # Montant : cherche un nombre suivi de $ ou mots-clés
+    principal_match = re.search(r"(\d+(?:[\.,]\d+)?)\s*(\$|usd|dollar|euros?)", t)
+    if principal_match:
+        principal = float(principal_match.group(1).replace(",", "."))
+
+    return {"principal": principal, "rate": rate, "years": int(round(years))}
