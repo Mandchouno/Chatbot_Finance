@@ -29,7 +29,7 @@ def chat(message: str, history: list[dict]) -> dict:
         params = parse_params(message)
         result = loan_payment(**params)
         reply = (
-            f"🏦 **Mensualité de prêt**\n"
+            f"**Mensualité de prêt**\n"
             f"Montant : {result['principal']:.2f}\n"
             f"Taux : {result['rate']*100:.2f}%\n"
             f"Durée : {result['years']} ans\n"
@@ -42,7 +42,7 @@ def chat(message: str, history: list[dict]) -> dict:
         reply = ans["answer"]
         sources = ans.get("sources", [])
         if sources:
-            reply += "\n\n📚 *Sources :*\n" + "\n".join(f"- {s}" for s in sources)
+            reply += "\n\n *Sources :*\n" + "\n".join(f"- {s}" for s in sources)
 
     # 3. Mettre à jour l’historique
     history = history + [
