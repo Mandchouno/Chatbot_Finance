@@ -1,82 +1,121 @@
+Chatbot Finance — Copilote Financier Éducatif
 
-# Plan de projet — Chatbot Finance
+1. Objectif du projet
 
-1) Objectif & périmètre
-	•	Offrir un “copilote” financier : réponses fiables, calculateurs (intérêts composés, mensualités de prêt, DCA), éducation financière et notions de base en fiscalité.
-	•	Ne pas fournir de conseil personnalisé au sens réglementaire ; rester informatif, avec renvoi vers un humain pour les cas sensibles.
-	•	Ciblage initial : finance personnelle et investissement indiciel (ETF/indices), terminologie claire et vulgarisée.
+Le Chatbot Finance est un assistant conversationnel éducatif destiné à vulgariser les concepts de finance personnelle et d’investissement.
+Il agit comme un copilote : il répond à des questions, effectue des calculs financiers standards (intérêts composés, mensualités de prêt, DCA), et puise dans une base de connaissances locale pour fournir des explications fiables et sourcées.
 
-2) Architecture fonctionnelle
-	•	Interface de conversation (chat) pilotée par un orchestrateur d’intentions.
-	•	Moteur Q/R documenté via récupération de connaissance (RAG) sur une base de documents locale.
-	•	“Tools” spécialisés pour les calculs financiers.
-	•	Module portefeuille (profilage de risque léger, allocation générique).
-	•	Stockage local pour la base documentaire et les préférences utilisateur de base.
+Important : le bot ne fournit aucun conseil financier personnalisé au sens réglementaire.
+Il délivre uniquement des informations générales et oriente vers un humain pour les cas spécifiques.
+``` bash
+Chatbot_Finance/
+│
+├── app/
+│   ├── main.py                # Point d’entrée FastAPI (serveur + routes API + templates)
+│   ├── intents.py             # Détection des intentions utilisateur (calc, prêt, rag)
+│   ├── tools/
+│   │   └── calculators.py     # Fonctions de calcul financier (compound, loan_payment)
+│   ├── rag/
+│   │   └── retriever.py       # Moteur RAG : recherche sémantique dans les fichiers du dossier knowledge
+│   ├── services/
+│   │   └── chat.py            # Orchestrateur de logique : relie intents, calculs et RAG
+│   ├── templates/
+│   │   └── index.html         # Interface web du chatbot (frontend minimal)
+│   └── static/
+│       └── styles.css         # Styles CSS du chat
+│
+├── data/
+│   └── knowledge/             # Documents texte/markdown servant de base de connaissance
+│
+├── requirements.txt           # Dépendances Python
+└── README.md                  # Documentation du projet
+```
+3. Fonctionnement général
 
-3) Organisation du dépôt & outils
-	•	Projet ouvert dans VS Code avec extensions Python, Jupyter, Git/GitHub, client API et (optionnel) Docker.
-	•	Gestion de versions Git (branche principale + branches de features).
-	•	Fichiers volumineux et sorties de notebooks exclus du versionnement ; secrets stockés dans un fichier d’environnement ignoré par Git.
-	•	Suivi des tâches par jalons (MVP, v1, v2) et issues courtes et actionnables.
+Le chatbot combine trois modules principaux :
+- intents.py : Détection d’intention. Analyse le texte utilisateur pour déterminer s’il s’agit d’un calcul ou d’une question d’information
+- tools/calculators.py : Calculs financiers. Contient les fonctions : compound() (intérêts composés) et loan_payment() (mensualités de prêt).
+- rag/retriever.py : Recherche sémantique (RAG). Analyse la question et retrouve les passages pertinents dans data/knowledge/
 
-4) Données & connaissance (RAG)
-	•	Dossier “knowledge” contenant des ressources d’éducation financière (glossaires, FAQ, guides ETF/indices, points de vigilance fiscaux par pays).
-	•	Politique de sourcing : documents publics, fiables, datés, avec citation des sources.
-	•	Processus d’indexation et de mise à jour régulière des documents.
-	•	Stratégie d’évaluation : réponses ancrées sur sources, contrôle du “je ne sais pas” quand la base ne suffit pas.
+``` bash 
+Utilisateur → interface_web → FastAPI → detect_intent()
+                   ↓
+      ┌──────── calc:compound ────────► calcul
+      │
+      ├──────── calc:loan ────────────► calcul
+      │
+      └──────── rag (par défaut) ─────► recherche_documentaire
+                   ↓
+         Réponse formatée → Interface
+```
+4. Détail des modules et fonctions
 
-5) Fonctionnalités MVP
-	•	Chat Q/R avec citations des documents utilisés.
-	•	Calculateurs : intérêts composés, mensualités de prêt amortissable, DCA simple.
-	•	Détection d’intention basique pour router vers Q/R ou calculateurs.
-	•	Santé du service : point de contrôle pour vérifier que l’API répond.
-	•	Expérience : messages de garde-fou et limites explicites (juridiction, pas de stock-picking).
+main.py
+	•	Lance le serveur FastAPI.
+	•	Sert la page HTML (index.html).
+	•	Gère les routes :
+	•	/api/chat → réception du message utilisateur et appel au service chat_service.
+	•	/health → vérifie que l’API répond.
 
-6) Algorithmes & logique
-	•	NLU/Orchestration : règles simples puis évolution vers un petit classifieur d’intentions.
-	•	RAG : index vectoriel local + recherche hybride (texte et sémantique), re-réorganisation des résultats et citations.
-	•	Calculs : formules financières standards (pas de dépendance externe pour le cœur de calcul).
-	•	Profilage & allocation (phase suivante) : questionnaire de risque léger → recommandation générique d’allocations par classes d’actifs ; optimisation bornée type Markowitz avec régularisation ; règles métiers (plafonds par classe, coûts, ESG optionnel).
-	•	Simulation (phase suivante) : scénarios Monte Carlo pour trajectoires de portefeuille, métriques de risque (probabilité d’atteindre un objectif, VaR/CVaR, drawdown).
+services/chat.py
+	•	Fonction clé : chat(message, history)
+	•	Orchestration :
+	1.	Appelle detect_intent() pour identifier le type de requête.
+	2.	Route vers :
+	•	compound() ou loan_payment() si c’est un calcul.
+	•	answer_with_knowledge() si c’est une question.
+	3.	Formate et renvoie la réponse (texte + historique).
 
-7) Sécurité, conformité & éthique
-	•	Avertissements visibles : information générale, non-conseil, limites par pays.
-	•	Confidentialité : minimisation de données, aucune donnée sensible non nécessaire, chiffrement au repos et en transit si hébergement.
-	•	Audits : journaux d’usage anonymisés, traçabilité des sources pour chaque réponse.
-	•	Filtrage : refus des requêtes hors périmètre (ex. signaux de trading ciblés, stratégies fiscales agressives).
+intents.py
+	•	detect_intent(text) : analyse les mots-clés (“intérêt”, “loan”, etc.).
+	•	parse_params(text) : extrait les valeurs numériques du texte.
+Actuellement basé sur la position, amélioration prévue pour reconnaître les unités (“%”, “$”, “ans”).
 
-8) Qualité, tests & observabilité
-	•	Tests unitaires pour tous les calculateurs et points clés.
-	•	Tests d’intégration pour le flux “question → réponse avec sources”.
-	•	Critères de qualité : exactitude numérique, fidélité aux sources, latence, taux de réponses “je ne sais pas” approprié.
-	•	Métriques : disponibilité, erreurs, temps de réponse, satisfaction utilisateur (feedback simple).
+tools/calculators.py
+	•	compound(principal, rate, years, n=12)
+Calcule la valeur future selon la formule des intérêts composés.
+	•	loan_payment(principal, rate, years, n=12)
+Calcule la mensualité d’un prêt amortissable.
 
-9) Roadmap & jalons
+rag/retriever.py
+	•	Initialise un index vectoriel avec SentenceTransformers.
+	•	Stocke les embeddings des documents du dossier data/knowledge.
+	•	answer_with_knowledge(question)
+Recherche les passages les plus pertinents, retourne un extrait et les chemins de fichiers sources.
 
-Semaine 1–2 (MVP)
-	•	Base du chat, routeur d’intentions simple, 3 calculateurs, RAG local avec quelques documents.
-	•	Disclaimers et page de santé du service.
-	•	Tests de base et README.
+templates/index.html et static/styles.css
+	•	Interface web simple (HTML + JS) :
+	•	Affiche les bulles de discussion.
+	•	Envoie les messages à /api/chat.
+	•	CSS minimal pour une interface claire et sombre.
 
-Semaine 3–4 (v1)
-	•	Questionnaire de risque, allocation générique (bornes, régularisation), rapport d’allocation lisible.
-	•	Première simulation simple (objectifs sur horizon, distribution d’issues).
-	•	Amélioration RAG (meilleur tri des passages, meilleur format de citations).
+⸻
 
-Semaine 5–6 (v2)
-	•	Personnalisation légère de l’expérience (ordre de questions, préférences).
-	•	Métriques de risque avancées et rapports exportables.
-	•	Observabilité renforcée, tableau de bord minimal, durcissement sécurité.
+5. Instructions d’exécution
+Prérequis
+	•	Python ≥ 3.10
+	•	Environnement virtuel (venv ou conda)
+	•	Dépendances du fichier requirements.txt
 
-10) Déploiement & exploitation
-	•	Exécution locale en développement (VS Code, lancement direct).
-	•	Conteneurisation (optionnelle) pour reproductibilité et déploiement simple.
-	•	Gestion de configuration par variables d’environnement.
-	•	Stratégie de mise à jour de la base documentaire et de redémarrage contrôlé.
-	•	Procédure d’escalade : en cas de question hors périmètre, message dédié et lien vers contact humain.
+Étapes
+	1.	Cloner le dépôt
+	``` bash
+	git clone https://github.com/Mandchouno/Chatbot_Finance.git
+	cd Chatbot_Finance
+	```
+	2. Créer et activer un environnement virtuel
+	``` bash
+	python3 -m venv .venv
+	source .venv/bin/activate   # macOS/Linux
+	# ou
+	.venv\Scripts\activate      # Windows
+	```
+	3. Installer les dépendances
+	``` bash
+	pip install -r requirements.txt
+	```
+	4.	Lancer le serveur
+	``` bash
+	python -m app.main
+	```
 
-11) Bonnes pratiques d’équipe
-	•	Petits commits descriptifs, branches courtes, revues rapides.
-	•	Tenir le README et le CHANGELOG à jour à chaque jalon.
-	•	Pas de secrets dans le dépôt ; rotation des clés si exposition accidentelle.
-	•	Respect des licences des ressources utilisées ; attribution des sources.
